@@ -42,18 +42,18 @@ class Chatline:
         """
         pattern = r"""
             (\[?)       #Zero or one open square bracket '['
-            (((\d{1,2})   #1 to 2 digit date
+            (((\d{1,4})   #1 to 2 digit date
             (/|-)       #'/' or '-' separator
             (\d{1,2})   #1 to 2 digit month
             (/|-)       #'/' or '-' separator
-            (\d{2,4}))   #2 to 4 digit of year
+            (\d{1,4}))   #2 to 4 digit of year
             (,?\s)      #Zero or one comma ',' and ingle space
             ((\d{1,2})  #1 to 2 digit of hour
             (:|\.)      #Colon ':' or dot '.' separator
             (\d{2})     #2 digit of minute
             (\.|:)?     #Zero or one of dot '.' or colon ':'
             (\d{2})?    #Zero or one of 2 digits of second
-            (\s[AP]M)?))  #Zero or one of ('space', 'A' or 'P', and 'M'
+            (\s[AaPm\.]M)?))  #Zero or one of ('space', 'A' or 'P', and 'M'
             (\]?\s-?\s?\s?)#Zero or one close square bracket ']', Zero or one (space and '-'), zero or one space
             (.+)        #One or more character of chat member phone number or contact name
         """
@@ -229,7 +229,9 @@ class Chatline:
             self.is_startingline = True
 
             # Extract timestamp
-            dt = self.extract_timestamp(starting_line.group(2).replace(".", ":"))
+            ts = starting_line.group(2).replace("a.m.", "am").replace("A.M.", "am")
+            ts = ts.replace("p.m.", "pm").replace("P.M.", "pm")
+            dt = self.extract_timestamp(ts.replace(".", ":"))
             # Set timestamp
             if dt:
                 self.timestamp = dt
