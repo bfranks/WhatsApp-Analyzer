@@ -5,15 +5,26 @@ The script reads an exported whatsapp chat and then extracts the data. You may n
 
 ##### Supported Analysis
 ----------------------
+member
 - Chat Count
-- Chat Avaerage
+- Chat Average
 - Member/Sender Rank
+
+url
 - Website/URL/Link Domain Rank
+
+word
 - Word Count and Rank
 - Most Used Word by Sender
+
+emoji
 - Emoji Usage Rank
 - Most Used Emoji by Sender
+
+activity
 - Timestamp Heatmap
+
+attachment
 - Attachment Classification (In Android, there is no difference pattern for attachment. But in iOS we can actually classify between Image, Video, Audio, GIF, Sticker, Document, and Contact Card)
 
 ### Preview

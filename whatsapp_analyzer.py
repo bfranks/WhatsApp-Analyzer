@@ -6,6 +6,7 @@ import io
 import sys
 from collections import Counter
 import emoji
+import dateutil
 
 # imported from current directory
 from chatline import Chatline
@@ -17,10 +18,12 @@ CLI Set
 """
 parser = argparse.ArgumentParser(
     description='Read and analyze whatsapp chat',
-    usage="python whatsapp_analyzer.py FILE [-h] [-d] [-s] [-c]"
+    usage="python whatsapp_analyzer.py FILE [-h] [-d] [-s] [-c] [-m] [-n] [-S] [-E]"
 )
 
 stop_words_options = [ "arabic","bulgarian","catalan","czech","danish","dutch","english","finnish","french","german","hebrew","hindi","hungarian","indonesian","italian","malaysian","norwegian","polish","portuguese","romanian","russian","slovak","spanish","swedish","turkish","ukrainian","vietnamese"]
+
+mode_options = [ "member", "url", "word", "emoji", "activity", "attachment"]
 
 parser.add_argument('file', 
     metavar='FILE',
@@ -48,6 +51,44 @@ parser.add_argument(
     required=False, 
     metavar='',
     help="Custom Stop Words. File path to stop word. File must a raw text. One word for every line"
+)
+
+parser.add_argument(
+    '-m',
+    '--mode',
+    action='append',
+    required=False,
+    metavar='',
+    help="Runs only certain types of analysis, more than one mode can be specified \
+         The Allowed values are: " + ", ".join(mode_options)
+)
+
+parser.add_argument(
+    '-n',
+    '--size',
+    required=False,
+    metavar='',
+    type=int,
+    default=20,
+    help="Sample size to show of users, default is 20."
+)
+
+parser.add_argument(
+    '-S',
+    '--startDate',
+    required=False,
+    metavar='',
+    type=str,
+    help="day to begin analysis (inclusive)"
+)
+
+parser.add_argument(
+    '-E',
+    '--endDate',
+    required=False,
+    metavar='',
+    type=str,
+    help="day to end analysis (exclusive)"
 )
 
 args = parser.parse_args()
@@ -99,9 +140,22 @@ chat_counter = {
 
 
 previous_line = None
+startDate = None
+if args.startDate:
+    startDate = dateutil.parser.parse(args.startDate)
+endDate = None
+if args.endDate:
+    endDate = dateutil.parser.parse(args.endDate)
+    endDate
 for line in lines:
     chatline = Chatline(line=line, previous_line=previous_line, debug=args.debug)
     previous_line = chatline
+
+    if startDate is not None and chatline.timestamp < startDate:
+        continue
+
+    if endDate is not None and chatline.timestamp > endDate:
+        continue
 
     # Counter
     if chatline.line_type == 'Chat':
@@ -239,112 +293,117 @@ def printCalendar(data):
 
 
 # Senders
-data = chat_counter['senders']
-print(Color.red("-" * 50))
-print(Color.red("Chat Count by Sender"))
-print(Color.red("-" * 50))
-print("Active Sender\t:", Color.red("{}".format(len(data))))
-print("Total Chat\t:", Color.red("{}".format(sum([x[1] for x in data]))))
-print("Average \t:", Color.red("{:.1f} chat per member".format((sum([x[1] for x in data]) / len(data)) if len(data) else 0)))
-print()
-printBarChart(data[:20], fill=Color.red("█"))
-if len(data) > 20:
-    print("---")
-    print("Other from {} member | {}".format(Color.red(str(len(data[20:]))), Color.red(str(sum([x[1] for x in data[20:]])))))
-print()
-print()
+if args.mode is None or "member" in args.mode:
+    data = chat_counter['senders']
+    print(Color.red("-" * 50))
+    print(Color.red("Chat Count by Sender"))
+    print(Color.red("-" * 50))
+    print("Active Sender\t:", Color.red("{}".format(len(data))))
+    print("Total Chat\t:", Color.red("{}".format(sum([x[1] for x in data]))))
+    print("Average \t:", Color.red("{:.1f} chat per member".format((sum([x[1] for x in data]) / len(data)) if len(data) else 0)))
+    print()
+    printBarChart(data[:args.size], fill=Color.red("█"))
+    if len(data) > args.size:
+        print("---")
+        print("Other from {} member | {}".format(Color.red(str(len(data[args.size:]))), Color.red(str(sum([x[1] for x in data[args.size:]])))))
+    print()
+    print()
 
 # Domains
-data = chat_counter['domains']
-print(Color.blue("-" * 50))
-print(Color.blue("Mentioned Domain (Shared Link/URL)"))
-print(Color.blue("-" * 50))
-print("Domain Count\t: ", Color.blue(str(len(data))))
-print("Mention Count\t: ", Color.blue(str(sum([x[1] for x in data]))))
-print()
-printBarChart(data[:20], fill=Color.blue("█"))
-if len(data) > 20:
-    print("---")
-    print("Other {} domain | {}".format(Color.blue(str(len(data[20:]))), Color.blue(str(sum([x[1] for x in data[20:]])))))
-print()
-print()
+if args.mode is None or "url" in args.mode:
+    data = chat_counter['domains']
+    print(Color.blue("-" * 50))
+    print(Color.blue("Mentioned Domain (Shared Link/URL)"))
+    print(Color.blue("-" * 50))
+    print("Domain Count\t: ", Color.blue(str(len(data))))
+    print("Mention Count\t: ", Color.blue(str(sum([x[1] for x in data]))))
+    print()
+    printBarChart(data[:args.size], fill=Color.blue("█"))
+    if len(data) > args.size:
+        print("---")
+        print("Other {} domain | {}".format(Color.blue(str(len(data[args.size:]))), Color.blue(str(sum([x[1] for x in data[args.size:]])))))
+    print()
+    print()
 
 
 # Emojis
-data = [(x[0] + " (" + emoji.demojize(x[0]) + ") ", x[1]) for x in chat_counter['emojis']]
-print(Color.orange("-" * 50))
-print(Color.orange("Used Emoji"))
-print(Color.orange("-" * 50))
-print("Unique Emoji\t: ", Color.orange(str(len(data))))
-print("Total Count\t: ", Color.orange(str(sum([x[1] for x in data]))))
-print()
-printBarChart(data[:20], fill=Color.orange("█"))
-if len(data) > 20:
-    print("---")
-    print("Other {} emoji | {}".format(Color.orange(str(len(data[20:]))), Color.orange(str(sum([x[1] for x in data[20:]])))))
-print()
-print()
+if args.mode is None or "emoji" in args.mode:
+    data = [(x[0] + " (" + emoji.demojize(x[0]) + ") ", x[1]) for x in chat_counter['emojis']]
+    print(Color.orange("-" * 50))
+    print(Color.orange("Used Emoji"))
+    print(Color.orange("-" * 50))
+    print("Unique Emoji\t: ", Color.orange(str(len(data))))
+    print("Total Count\t: ", Color.orange(str(sum([x[1] for x in data]))))
+    print()
+    printBarChart(data[:args.size], fill=Color.orange("█"))
+    if len(data) > args.size:
+        print("---")
+        print("Other {} emoji | {}".format(Color.orange(str(len(data[args.size:]))), Color.orange(str(sum([x[1] for x in data[args.size:]])))))
+    print()
+    print()
 
-# Fav Emojis
-data = [(x[0][0] + " | " + x[0][1] + " | (" + emoji.demojize(x[0][1]) + ")", x[1]) for x in chat_counter['fav_emoji']]
-print(Color.orange("-" * 50))
-print(Color.orange("Favorite Emoji by Member"))
-print(Color.orange("-" * 50))
-print()
-printBarChart(data[:20], fill=Color.orange("█"))
-print()
-print()
+    # Fav Emojis
+    data = [(x[0][0] + " | " + x[0][1] + " | (" + emoji.demojize(x[0][1]) + ")", x[1]) for x in chat_counter['fav_emoji']]
+    print(Color.orange("-" * 50))
+    print(Color.orange("Favorite Emoji by Member"))
+    print(Color.orange("-" * 50))
+    print()
+    printBarChart(data[:args.size], fill=Color.orange("█"))
+    print()
+    print()
 
 # Words
-data = chat_counter['words']
-print(Color.green("-" * 50))
-print(Color.green("Used Word"))
-print(Color.green("-" * 50))
-print("Unique Word\t: ", Color.green(str(len(data))))
-print("Total Count\t: ", Color.green(str(sum([x[1] for x in data]))))
-print()
-printBarChart(data[:20], fill=Color.green("█"))
-if len(data) > 20:
-    print("---")
-    print("Other {} word | {}".format(Color.green(str(len(data[20:]))), Color.green(str(sum([x[1] for x in data[20:]])))))
-print()
-print()
+if args.mode is None or "word" in args.mode:
+    data = chat_counter['words']
+    print(Color.green("-" * 50))
+    print(Color.green("Used Word"))
+    print(Color.green("-" * 50))
+    print("Unique Word\t: ", Color.green(str(len(data))))
+    print("Total Count\t: ", Color.green(str(sum([x[1] for x in data]))))
+    print()
+    printBarChart(data[:args.size], fill=Color.green("█"))
+    if len(data) > args.size:
+        print("---")
+        print("Other {} word | {}".format(Color.green(str(len(data[args.size:]))), Color.green(str(sum([x[1] for x in data[args.size:]])))))
+    print()
+    print()
 
-# Fav Word
-data = [(x[0][0] + " | " + x[0][1] + " | ", x[1]) for x in chat_counter['fav_word']]
-print(Color.green("-" * 50))
-print(Color.green("Favorite Word by Member"))
-print(Color.green("-" * 50))
-print()
-printBarChart(data[:20], fill=Color.green("█"))
-print()
-print()
+    # Fav Word
+    data = [(x[0][0] + " | " + x[0][1] + " | ", x[1]) for x in chat_counter['fav_word']]
+    print(Color.green("-" * 50))
+    print(Color.green("Favorite Word by Member"))
+    print(Color.green("-" * 50))
+    print()
+    printBarChart(data[:args.size], fill=Color.green("█"))
+    print()
+    print()
 
 # Heatmap
-data = chat_counter['timestamps']
-print(Color.purple("-" * 50))
-print(Color.purple("Chat Activity Heatmap"))
-print(Color.purple("-" * 50))
-if len(data) > 0:
-    print("Most Busy\t: {}, at {} ({} chat)".format(
-        Color.purple(str(data[0][0][0])), 
-        Color.purple(str(data[0][0][1]) + ":00"), 
-        Color.purple(str(data[0][1]))))
-    print("Most Silence\t: {}, at {} ({} chat)".format(
-        Color.purple(str(data[-1][0][0])), 
-        Color.purple(str(data[-1][0][1]) + ":00"), 
-        Color.purple(str(data[-1][1]))))
-print()
-print('---')
-print('X: Days')
-print('Y: Hours')
-print('---')
-print('Less [{}{}{}{}{}] More'.format(
-    Color.custom("===", bold=False), 
-    Color.custom("░░░", bold=True, fg_light_grey=True),
-    Color.custom("▒▒▒", bold=True, fg_green=True),
-    Color.custom("▓▓▓", bold=True, fg_orange=True),
-    Color.custom("███", bold=True, fg_red=True)
-))
-print()
-printCalendar(dict(data))
+if args.mode is None or "activity" in args.mode:
+    data = chat_counter['timestamps']
+    print(Color.purple("-" * 50))
+    print(Color.purple("Chat Activity Heatmap"))
+    print(Color.purple("-" * 50))
+    if len(data) > 0:
+        print("Most Busy\t: {}, at {} ({} chat)".format(
+            Color.purple(str(data[0][0][0])),
+            Color.purple(str(data[0][0][1]) + ":00"),
+            Color.purple(str(data[0][1]))))
+        print("Most Silence\t: {}, at {} ({} chat)".format(
+            Color.purple(str(data[-1][0][0])),
+            Color.purple(str(data[-1][0][1]) + ":00"),
+            Color.purple(str(data[-1][1]))))
+    print()
+    print('---')
+    print('X: Days')
+    print('Y: Hours')
+    print('---')
+    print('Less [{}{}{}{}{}] More'.format(
+        Color.custom("===", bold=False),
+        Color.custom("░░░", bold=True, fg_light_grey=True),
+        Color.custom("▒▒▒", bold=True, fg_green=True),
+        Color.custom("▓▓▓", bold=True, fg_orange=True),
+        Color.custom("███", bold=True, fg_red=True)
+    ))
+    print()
+    printCalendar(dict(data))
