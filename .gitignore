@@ -12,3 +12,5 @@ ipython_config.py
 
 # VSCODE
 .vscode
+/venv/
+/.idea/
