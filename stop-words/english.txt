@@ -51,6 +51,7 @@ also
 although
 always
 am
+a.m.
 amid
 amidst
 among
@@ -805,6 +806,7 @@ places
 please
 plus
 pm
+p.m.
 pmid
 pn
 point
