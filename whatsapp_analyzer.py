@@ -8,6 +8,7 @@ from collections import Counter
 import emoji
 import dateutil
 import datetime
+import pathlib
 
 # imported from current directory
 from chatline import Chatline
@@ -122,10 +123,11 @@ def main():
     stop_words = []
     if args.stopword:
         try:
-            with io.open("stop-words/" + args.stopword + ".txt", "r", encoding="utf-8") as file:
+            path = "stop-words/" + args.stopword + ".txt"
+            with open(path, "r", encoding="utf-8") as file:
                 stop_words = [x.strip() for x in file.readlines()]
         except IOError as e:
-            print("Stop Words file not found in \"" + args.file + "\" not found.")
+            print("Stop Words file not found in \"" + args.stopword + "\" not found.")
             sys.exit()
 
     if args.customstopword:
